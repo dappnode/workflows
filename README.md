@@ -31,7 +31,7 @@ on:
   workflow_dispatch:
 jobs:
   bump:
-    uses: dappnode/workflows/.github/workflows/bump-upstream.yml@main
+    uses: dappnode/workflows/.github/workflows/bump-upstream.yml@master
     with:
       use_variants: true
     secrets: inherit
@@ -49,7 +49,7 @@ on:
     paths-ignore: ['README.md']
 jobs:
   main:
-    uses: dappnode/workflows/.github/workflows/build-test-release.yml@main
+    uses: dappnode/workflows/.github/workflows/build-test-release.yml@master
     with:
       build_variant: mainnet
     secrets: inherit
@@ -71,7 +71,7 @@ on:
     paths-ignore: ['README.md']
 jobs:
   release:
-    uses: dappnode/workflows/.github/workflows/staking-release.yml@main
+    uses: dappnode/workflows/.github/workflows/staking-release.yml@master
     with:
       package_variant: hoodi
       consensus_client: ${{ inputs.consensus_client || '' }}
@@ -93,7 +93,7 @@ on:
         options: [lodestar, teku, prysm, nimbus, lighthouse]
 jobs:
   sync:
-    uses: dappnode/workflows/.github/workflows/sync-production.yml@main
+    uses: dappnode/workflows/.github/workflows/sync-production.yml@master
     with:
       execution_client: geth  # change per repo
       consensus_client: ${{ inputs.consensus_client || '' }}
@@ -110,7 +110,7 @@ on:
     types: [tropibot-sync-test]
 jobs:
   test:
-    uses: dappnode/workflows/.github/workflows/staking-sync-test.yml@main
+    uses: dappnode/workflows/.github/workflows/staking-sync-test.yml@master
     with:
       package_variant: hoodi
       execution_client: ${{ github.event.client_payload.execution_client }}
@@ -128,7 +128,7 @@ on:
     types: [tropibot-attestation-test]
 jobs:
   test:
-    uses: dappnode/workflows/.github/workflows/staking-full-test.yml@main
+    uses: dappnode/workflows/.github/workflows/staking-full-test.yml@master
     with:
       package_variant: hoodi
       execution_client: ${{ github.event.client_payload.execution_client }}
@@ -148,7 +148,7 @@ on:
     tags: ['v*']
 jobs:
   docker:
-    uses: dappnode/workflows/.github/workflows/docker-build-push.yml@main
+    uses: dappnode/workflows/.github/workflows/docker-build-push.yml@master
     with:
       image_name: dappnode/my-tool
       platforms: linux/amd64,linux/arm64
@@ -202,6 +202,6 @@ Each repo gets 3 minimal workflow stubs:
 
 - **Public repo** — no GitHub Enterprise requirement, community-visible
 - **`secrets: inherit`** — minimal stubs, org-level secrets
-- **`@main` ref** — internal trust within org (no version pinning needed)
+- **`@master` ref** — internal trust within org (no version pinning needed)
 - **All DAppNodeSDK commands centralized** — SDK updates happen here, not in 87 repos
 - **tropibot test-runner image** — `ghcr.io/dappnode/tropibot/test-runner:latest`
