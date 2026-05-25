@@ -1,0 +1,113 @@
+name: Staking Release
+
+on:
+  workflow_call:
+    inputs:
+      package_variant:
+        description: "Package variant to build (e.g., hoodi)"
+        required: false
+        type: string
+        default: "hoodi"
+      consensus_client:
+        description: "Consensus client for testing"
+        required: false
+        type: string
+        default: ""
+      runner_label:
+        description: "Self-hosted runner label for build and test"
+        required: false
+        type: string
+        default: "staking-test-hoodi"
+      publish_runner_label:
+        description: "Self-hosted runner label for publishing"
+        required: false
+        type: string
+        default: "ipfs-dev-gateway"
+      timeout:
+        description: "Publish timeout"
+        required: false
+        type: string
+        default: "2h"
+    secrets:
+      TROPI_APP_ID:
+        required: true
+      TROPI_APP_PRIVATE_KEY:
+        required: true
+
+jobs:
+  build:
+    runs-on: ${{ inputs.runner_label }}
+    name: Build
+    outputs:
+      ipfs_hash: ${{ steps.extract_hash.outputs.ipfs_hash }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Build and upload to IPFS
+        run: |
+          npx @dappnode/dappnodesdk build \
+            --provider=http://$(docker inspect DAppNodeCore-ipfs.dnp.dappnode.eth --format '{{.NetworkSettings.Networks.dncore_network.IPAddress}}'):5001 \
+            --variant=${{ inputs.package_variant }}
+
+      - name: Extract IPFS hash
+        id: extract_hash
+        run: |
+          IPFS_HASH=$(jq -r 'to_entries | last | .value.hash' package_variants/${{ inputs.package_variant }}/releases.json)
+          echo "ipfs_hash=$IPFS_HASH" >> $GITHUB_OUTPUT
+          echo "Extracted IPFS hash: $IPFS_HASH"
+
+  test:
+    runs-on: ${{ inputs.runner_label }}
+    name: Test
+    needs: [build]
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/create-github-app-token@v1
+        id: app-token
+        with:
+          app-id: ${{ secrets.TROPI_APP_ID }}
+          private-key: ${{ secrets.TROPI_APP_PRIVATE_KEY }}
+
+      - name: Run staker test
+        run: |
+          docker run --rm --pull=always --network dncore_network \
+            -v /var/run/docker.sock:/var/run/docker.sock \
+            -e MODE=test \
+            -e IPFS_HASH=${{ needs.build.outputs.ipfs_hash }} \
+            -e CONSENSUS_CLIENT=${{ inputs.consensus_client }} \
+            -e GITHUB_TOKEN=${{ steps.app-token.outputs.token }} \
+            -e GITHUB_REPOSITORY=${{ github.repository }} \
+            -e GITHUB_PR_NUMBER=${{ github.event.pull_request.number }} \
+            -e GITHUB_RUN_ID=${{ github.run_id }} \
+            -e GITHUB_SERVER_URL=${{ github.server_url }} \
+            ghcr.io/dappnode/tropibot/test-runner:latest
+
+  release:
+    runs-on: ${{ inputs.publish_runner_label }}
+    name: Release
+    needs: [test]
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "22"
+
+      - uses: actions/create-github-app-token@v1
+        id: app-token
+        with:
+          app-id: ${{ secrets.TROPI_APP_ID }}
+          private-key: ${{ secrets.TROPI_APP_PRIVATE_KEY }}
+
+      - name: Publish
+        run: |
+          npx @dappnode/dappnodesdk publish patch \
+            --github-release \
+            --content_provider=http://10.200.200.7:5001 \
+            --eth_provider=https://web3.dappnode.net \
+            --timeout ${{ inputs.timeout }} \
+            --all-variants
+        env:
+          GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
+          DEVELOPER_ADDRESS: "0xf35960302a07022aba880dffaec2fdd64d5bf1c1"

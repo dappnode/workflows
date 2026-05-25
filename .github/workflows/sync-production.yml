@@ -1,0 +1,52 @@
+name: Sync Production
+
+on:
+  workflow_call:
+    inputs:
+      execution_client:
+        description: "Execution client to sync (geth, reth, nethermind, besu, erigon)"
+        required: true
+        type: string
+      consensus_client:
+        description: "Consensus client override"
+        required: false
+        type: string
+        default: ""
+      network:
+        description: "Network to sync"
+        required: false
+        type: string
+        default: "hoodi"
+      runner_label:
+        description: "Self-hosted runner label"
+        required: false
+        type: string
+        default: "staking-test-hoodi"
+    secrets:
+      DISCORD_STAKERS_TESTS_WEBHOOK:
+        required: false
+
+jobs:
+  sync:
+    runs-on: ${{ inputs.runner_label }}
+    name: Sync ${{ inputs.execution_client }}
+    steps:
+      - name: Run sync
+        run: |
+          docker run --rm --pull=always --network dncore_network \
+            -v /var/run/docker.sock:/var/run/docker.sock \
+            -e MODE=sync \
+            -e EXECUTION_CLIENT=${{ inputs.execution_client }} \
+            -e CONSENSUS_CLIENT=${{ inputs.consensus_client }} \
+            -e NETWORK=${{ inputs.network }} \
+            ghcr.io/dappnode/tropibot/test-runner:latest
+
+  notify:
+    if: always() && needs.sync.result != 'success'
+    needs: [sync]
+    uses: dappnode/workflows/.github/workflows/notify-discord.yml@main
+    with:
+      result: ${{ needs.sync.result }}
+      test_type: "sync-${{ inputs.execution_client }}"
+    secrets:
+      DISCORD_STAKERS_TESTS_WEBHOOK: ${{ secrets.DISCORD_STAKERS_TESTS_WEBHOOK }}

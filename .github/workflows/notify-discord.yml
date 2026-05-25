@@ -1,0 +1,38 @@
+name: Notify Discord
+
+on:
+  workflow_call:
+    inputs:
+      result:
+        description: "Job result (success, failure, cancelled)"
+        required: true
+        type: string
+      test_type:
+        description: "Type of test that ran"
+        required: true
+        type: string
+    secrets:
+      DISCORD_STAKERS_TESTS_WEBHOOK:
+        required: true
+
+jobs:
+  notify:
+    if: inputs.result != 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: dappnode/workflows
+          ref: main
+          sparse-checkout: scripts
+
+      - name: Send Discord notification
+        run: bash scripts/discord-notify.sh
+        env:
+          DISCORD_STAKERS_TESTS_WEBHOOK: ${{ secrets.DISCORD_STAKERS_TESTS_WEBHOOK }}
+          RESULT: ${{ inputs.result }}
+          TEST_TYPE: ${{ inputs.test_type }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+          SERVER_URL: ${{ github.server_url }}
+          RUN_ID: ${{ github.run_id }}
