@@ -6,7 +6,8 @@ Centralized reusable GitHub Actions workflows for the DAppNode organization.
 
 | Workflow | Description | Target Repos |
 |----------|-------------|-------------|
-| [`bump-upstream.yml`](.github/workflows/bump-upstream.yml) | Check and bump upstream versions | All DAppNodePackage-* |
+| [`bump-upstream.yml`](.github/workflows/bump-upstream.yml) | Check and bump upstream versions (via tropibot bump-runner) | All DAppNodePackage-* |
+| [`build-package.yml`](.github/workflows/build-package.yml) | Build a DAppNode package variant, output IPFS hash | Component (used by other workflows) |
 | [`build-test-release.yml`](.github/workflows/build-test-release.yml) | Build on PR, publish on push | CL clients, generic packages |
 | [`staking-release.yml`](.github/workflows/staking-release.yml) | Build → test → release pipeline | EL clients (geth, besu, etc.) |
 | [`sync-production.yml`](.github/workflows/sync-production.yml) | Daily sync checks | EL clients |
@@ -18,6 +19,8 @@ Centralized reusable GitHub Actions workflows for the DAppNode organization.
 ## Usage
 
 ### Bump Upstream (8-line stub)
+
+Uses the tropibot `bump-runner` binary in a Docker container to check for upstream version updates and create PRs.
 
 ```yaml
 # .github/workflows/auto_check.yml
