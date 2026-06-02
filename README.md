@@ -4,61 +4,37 @@ Centralized reusable GitHub Actions workflows for the DAppNode organization.
 
 ## Available Workflows
 
-| Workflow | Description | Target Repos |
-|----------|-------------|-------------|
-| [`bump-upstream.yml`](.github/workflows/bump-upstream.yml) | Check and bump upstream versions (via tropibot bump-runner) | All DAppNodePackage-* |
-| [`build-package.yml`](.github/workflows/build-package.yml) | Build a DAppNode package variant, output IPFS hash | Component (used by other workflows) |
-| [`build-test-release.yml`](.github/workflows/build-test-release.yml) | Build on PR, publish on push | CL clients, generic packages |
-| [`staking-release.yml`](.github/workflows/staking-release.yml) | Build → test → release pipeline | EL clients (geth, besu, etc.) |
-| [`sync-production.yml`](.github/workflows/sync-production.yml) | Daily sync checks | EL clients |
-| [`staking-full-test.yml`](.github/workflows/staking-full-test.yml) | Full attestation test (PR/dispatch) | All staking packages |
-| [`staking-sync-test.yml`](.github/workflows/staking-sync-test.yml) | Sync test (PR/dispatch) | All staking packages |
-| [`notify-discord.yml`](.github/workflows/notify-discord.yml) | Discord failure notifications | Internal (called by other workflows) |
-| [`docker-build-push.yml`](.github/workflows/docker-build-push.yml) | Multi-platform Docker build & push | tropibot, infra tools |
+| Workflow | Description | Used by |
+|----------|-------------|---------|
+| [`bump-upstream.yml`](.github/workflows/bump-upstream.yml) | Check and bump upstream versions (tropibot bump-runner) | All staking packages |
+| [`staking-release.yml`](.github/workflows/staking-release.yml) | Build → test → release pipeline | All staking packages |
+| [`staking-sync-test.yml`](.github/workflows/staking-sync-test.yml) | Sync test on PRs | All staking packages |
+| [`sync-production.yml`](.github/workflows/sync-production.yml) | Daily production sync + Discord notification | EL packages |
+| [`notify-discord.yml`](.github/workflows/notify-discord.yml) | Discord failure notifications | Internal (called by sync-production) |
 
 ## Usage
 
-### Bump Upstream (8-line stub)
+All caller stubs use `secrets: inherit` to pass org-level secrets automatically.
 
-Uses the tropibot `bump-runner` binary in a Docker container to check for upstream version updates and create PRs.
+### Bump Upstream
 
 ```yaml
-# .github/workflows/auto_check.yml
-name: Bump Upstream
+name: Bump upstream version
 on:
   schedule:
-    - cron: '0 */4 * * *'
+    - cron: "00 */4 * * *"
   workflow_dispatch:
-jobs:
-  bump:
-    uses: dappnode/workflows/.github/workflows/bump-upstream.yml@master
-    with:
-      use_variants: true
-    secrets: inherit
-```
-
-### Build Test & Release (9-line stub)
-
-```yaml
-# .github/workflows/main.yml
-name: Main
-on:
-  pull_request:
   push:
-    branches: [main, master, 'v[0-9]+.[0-9]+.[0-9]+']
-    paths-ignore: ['README.md']
+    branches: ["master", "main"]
 jobs:
-  main:
-    uses: dappnode/workflows/.github/workflows/build-test-release.yml@master
-    with:
-      build_variant: mainnet
+  bump-upstream:
+    uses: dappnode/workflows/.github/workflows/bump-upstream.yml@master
     secrets: inherit
 ```
 
-### Staking Release (12-line stub)
+### Release (Execution Client)
 
 ```yaml
-# .github/workflows/release.yml
 name: Release
 on:
   workflow_dispatch:
@@ -67,25 +43,89 @@ on:
         type: choice
         options: [lodestar, teku, prysm, nimbus, lighthouse]
   push:
-    branches: [main]
-    paths-ignore: ['README.md']
+    branches: ["main"]
+    paths-ignore: ["README.md"]
 jobs:
   release:
     uses: dappnode/workflows/.github/workflows/staking-release.yml@master
     with:
-      package_variant: hoodi
       consensus_client: ${{ inputs.consensus_client || '' }}
     secrets: inherit
 ```
 
-### Sync Production (12-line stub)
+### Release (Consensus Client)
 
 ```yaml
-# .github/workflows/sync.yml
-name: Sync Production
+name: Release
+on:
+  workflow_dispatch:
+    inputs:
+      execution_client:
+        type: choice
+        options: [geth, nethermind, besu, erigon, reth]
+  push:
+    branches: ["main"]
+    paths-ignore: ["README.md"]
+jobs:
+  release:
+    uses: dappnode/workflows/.github/workflows/staking-release.yml@master
+    with:
+      consensus_client: "lodestar"
+      execution_client: ${{ inputs.execution_client || '' }}
+    secrets: inherit
+```
+
+### Sync Test (Execution Client)
+
+```yaml
+name: Execution Client Sync Test
+on:
+  workflow_dispatch:
+    inputs:
+      consensus_client:
+        type: choice
+        options: [lodestar, teku, prysm, nimbus, lighthouse]
+  pull_request:
+    branches: ["main"]
+    paths-ignore: ["README.md"]
+jobs:
+  sync-test:
+    uses: dappnode/workflows/.github/workflows/staking-sync-test.yml@master
+    with:
+      execution_client: "erigon"
+      consensus_client: ${{ inputs.consensus_client || '' }}
+    secrets: inherit
+```
+
+### Sync Test (Consensus Client)
+
+```yaml
+name: Execution Client Sync Test
+on:
+  workflow_dispatch:
+    inputs:
+      execution_client:
+        type: choice
+        options: [geth, nethermind, besu, erigon, reth]
+  pull_request:
+    branches: ["main"]
+    paths-ignore: ["README.md"]
+jobs:
+  sync-test:
+    uses: dappnode/workflows/.github/workflows/staking-sync-test.yml@master
+    with:
+      consensus_client: "lodestar"
+      execution_client: ${{ inputs.execution_client || '' }}
+    secrets: inherit
+```
+
+### Sync Production (Execution Clients only)
+
+```yaml
+name: Execution Client Sync Production
 on:
   schedule:
-    - cron: '0 4 * * *'
+    - cron: "0 5 * * *"
   workflow_dispatch:
     inputs:
       consensus_client:
@@ -95,113 +135,44 @@ jobs:
   sync:
     uses: dappnode/workflows/.github/workflows/sync-production.yml@master
     with:
-      execution_client: geth  # change per repo
+      execution_client: "erigon"
       consensus_client: ${{ inputs.consensus_client || '' }}
     secrets: inherit
 ```
 
-### TropiBot Dispatch Stubs (9-line stubs)
+## Packages Using These Workflows
 
-```yaml
-# .github/workflows/tropibot-sync-test.yml
-name: "TropiBot: Sync Test"
-on:
-  repository_dispatch:
-    types: [tropibot-sync-test]
-jobs:
-  test:
-    uses: dappnode/workflows/.github/workflows/staking-sync-test.yml@master
-    with:
-      package_variant: hoodi
-      execution_client: ${{ github.event.client_payload.execution_client }}
-      consensus_client: ${{ github.event.client_payload.consensus_client }}
-      pr_number: ${{ github.event.client_payload.pr_number }}
-      head_ref: ${{ github.event.client_payload.head_ref }}
-    secrets: inherit
-```
+### Execution Clients
+erigon, geth, nethermind, besu, reth — each has 4 stubs:
+- `bump-upstream.yml` → `bump-upstream`
+- `release.yml` → `staking-release`
+- `sync-test.yml` → `staking-sync-test`
+- `sync-production.yml` → `sync-production`
 
-```yaml
-# .github/workflows/tropibot-attestation-test.yml
-name: "TropiBot: Proof of Attestation"
-on:
-  repository_dispatch:
-    types: [tropibot-attestation-test]
-jobs:
-  test:
-    uses: dappnode/workflows/.github/workflows/staking-full-test.yml@master
-    with:
-      package_variant: hoodi
-      execution_client: ${{ github.event.client_payload.execution_client }}
-      consensus_client: ${{ github.event.client_payload.consensus_client }}
-      pr_number: ${{ github.event.client_payload.pr_number }}
-      head_ref: ${{ github.event.client_payload.head_ref }}
-    secrets: inherit
-```
-
-### Docker Build & Push (10-line stub)
-
-```yaml
-# .github/workflows/docker.yml
-name: Docker
-on:
-  push:
-    tags: ['v*']
-jobs:
-  docker:
-    uses: dappnode/workflows/.github/workflows/docker-build-push.yml@master
-    with:
-      image_name: dappnode/my-tool
-      platforms: linux/amd64,linux/arm64
-    secrets: inherit
-```
+### Consensus Clients
+lodestar, lighthouse, nimbus, prysm, teku — each has 3 stubs:
+- `bump-upstream.yml` → `bump-upstream`
+- `release.yml` → `staking-release`
+- `sync-test.yml` → `staking-sync-test`
 
 ## Required Org-Level Configuration
 
-### Secrets (set at org level)
+### Secrets
 - `TROPI_APP_PRIVATE_KEY` — GitHub App private key for automated PRs/tokens
-- `PINATA_API_KEY` / `PINATA_SECRET_API_KEY` — IPFS pinning
-- `DISCORD_STAKERS_TESTS_WEBHOOK` — Discord failure notifications
-- `NPM_TOKEN` — NPM publishing (SDK/DAPPMANAGER only)
+- `PINATA_API_KEY` / `PINATA_SECRET_API_KEY` — IPFS pinning (bump-upstream)
+- `DISCORD_STAKERS_TESTS_WEBHOOK` — Discord failure notifications (sync-production)
 
-### Variables (set at org level)
-- `TROPI_APP_ID` — GitHub App ID (non-sensitive)
+### Variables
+- `TROPI_APP_ID` — GitHub App ID (non-sensitive, accessed via `vars` context)
 
 ### Self-Hosted Runners
-- `staking-test-hoodi` — DAppNode runner for staking tests
+- `staking-test-hoodi` — DAppNode runner for build and sync tests
 - `ipfs-dev-gateway` — Runner with IPFS access for publishing
-
-## Migration Roadmap
-
-### ✅ Phase 1: Create this repo (done)
-### ✅ Phase 2: Update tropibot to reference this repo
-
-### Phase 3: Execution clients (geth, besu, nethermind, erigon, reth)
-Each repo gets 4 minimal workflow stubs:
-- `auto_check.yml` → calls `bump-upstream`
-- `release.yml` → calls `staking-release`
-- `sync.yml` → calls `sync-production`
-- `tropibot-sync-test.yml` → calls `staking-sync-test`
-- `tropibot-attestation-test.yml` → calls `staking-full-test`
-
-### Phase 4: Consensus clients (lighthouse, lodestar, prysm, teku, nimbus)
-Each repo gets 3 minimal workflow stubs:
-- `auto_check.yml` → calls `bump-upstream`
-- `main.yml` → calls `build-test-release`
-- `tropibot-sync-test.yml` → calls `staking-sync-test`
-- `tropibot-attestation-test.yml` → calls `staking-full-test`
-
-### Phase 5: Remaining packages (anchor, pi-hole, tailscale, obol, etc.)
-- `auto_check.yml` → calls `bump-upstream`
-- `main.yml` → calls `build-test-release`
-
-### Phase 6: Core packages (DNP_CORE, DNP_DAPPMANAGER)
-- More custom — evaluate individually
-- DNP_DAPPMANAGER has unit tests, monorepo, NPM publish (may need dedicated workflow)
 
 ## Design Decisions
 
-- **Public repo** — no GitHub Enterprise requirement, community-visible
-- **`secrets: inherit`** — minimal stubs, org-level secrets
-- **`@master` ref** — internal trust within org (no version pinning needed)
-- **All DAppNodeSDK commands centralized** — SDK updates happen here, not in 87 repos
-- **tropibot test-runner image** — `ghcr.io/dappnode/tropibot/test-runner:latest`
+- **`secrets: inherit`** — minimal stubs, org-level secrets flow automatically
+- **`vars.TROPI_APP_ID`** — accessed from caller's `vars` context (no need to pass as secret)
+- **`@master` ref** — internal trust within org, no version pinning needed
+- **`dappnode/tropibot:latest`** — single Docker image for test-runner and bump-runner
+- **Bidirectional testing** — EL packages fix their client name and parameterize the CL, CL packages do the reverse
