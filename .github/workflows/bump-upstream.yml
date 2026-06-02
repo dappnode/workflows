@@ -4,25 +4,17 @@ on:
   workflow_call:
     inputs:
       use_variants:
-        description: "If true, include variant manifests/compose files under variants_dir"
+        description: "Use --use-variants flag for bump-upstream"
         required: false
         type: boolean
         default: true
-      variants_dir:
-        description: "Path to variants directory in target repository"
-        required: false
-        type: string
-        default: variants
-      image:
-        description: "Published tropibot image containing bump-runner binary"
-        required: false
-        type: string
-        default: ghcr.io/dappnode/tropibot:latest
     secrets:
-      TROPI_APP_ID:
-        required: true
       TROPI_APP_PRIVATE_KEY:
         required: true
+      PINATA_API_KEY:
+        required: false
+      PINATA_SECRET_API_KEY:
+        required: false
 
 permissions:
   contents: write
@@ -33,30 +25,22 @@ jobs:
     runs-on: ubuntu-latest
     name: Check Upstream Version
     steps:
+      - uses: actions/checkout@v6
+
       - uses: actions/create-github-app-token@v1
         id: app-token
         with:
-          app-id: ${{ secrets.TROPI_APP_ID }}
+          app-id: ${{ vars.TROPI_APP_ID }}
           private-key: ${{ secrets.TROPI_APP_PRIVATE_KEY }}
 
-      - name: Write GitHub App private key
+      - name: Bump upstream
         run: |
-          printf '%s' "${{ secrets.TROPI_APP_PRIVATE_KEY }}" > "$RUNNER_TEMP/tropi-app.pem"
-          chmod 600 "$RUNNER_TEMP/tropi-app.pem"
-
-      - name: Run one-shot upstream bump for this repo
+          ARGS=""
+          if [ "${{ inputs.use_variants }}" = "true" ]; then
+            ARGS="--use-variants"
+          fi
+          npx @dappnode/dappnodesdk github-action bump-upstream $ARGS
         env:
-          IMAGE: ${{ inputs.image }}
-        run: |
-          docker pull "$IMAGE"
-          docker run --rm \
-            -e GITHUB_APP_ID="${{ secrets.TROPI_APP_ID }}" \
-            -e GITHUB_PRIVATE_KEY_PATH=/work/tropi-app.pem \
-            -e GITHUB_INSTALLATION_ID="${{ steps.app-token.outputs['installation-id'] }}" \
-            -e GITHUB_REPOSITORY="${{ github.repository }}" \
-            -e BUMP_FAIL_ON_ERRORS="true" \
-            -e USE_VARIANTS="${{ inputs.use_variants }}" \
-            -e VARIANTS_DIR="${{ inputs.variants_dir }}" \
-            -v "$RUNNER_TEMP/tropi-app.pem:/work/tropi-app.pem:ro" \
-            "$IMAGE" \
-            bump-runner
+          GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
+          PINATA_API_KEY: ${{ secrets.PINATA_API_KEY }}
+          PINATA_SECRET_API_KEY: ${{ secrets.PINATA_SECRET_API_KEY }}

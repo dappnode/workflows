@@ -39,8 +39,6 @@ on:
         type: string
         default: ""
     secrets:
-      TROPI_APP_ID:
-        required: true
       TROPI_APP_PRIVATE_KEY:
         required: true
 
@@ -76,7 +74,7 @@ jobs:
       - uses: actions/create-github-app-token@v1
         id: app-token
         with:
-          app-id: ${{ secrets.TROPI_APP_ID }}
+          app-id: ${{ vars.TROPI_APP_ID }}
           private-key: ${{ secrets.TROPI_APP_PRIVATE_KEY }}
 
       - name: Run sync test
@@ -93,4 +91,5 @@ jobs:
             -e GITHUB_REPOSITORY=${{ github.repository }} \
             -e GITHUB_PR_NUMBER=${PR_NUMBER} \
             -e GITHUB_RUN_ID=${{ github.run_id }} \
-            ghcr.io/dappnode/tropibot/test-runner:latest
+            -e GITHUB_SERVER_URL=${{ github.server_url }} \
+            dappnode/tropibot:latest test-runner

@@ -39,12 +39,12 @@ jobs:
             -e EXECUTION_CLIENT=${{ inputs.execution_client }} \
             -e CONSENSUS_CLIENT=${{ inputs.consensus_client }} \
             -e NETWORK=${{ inputs.network }} \
-            ghcr.io/dappnode/tropibot/test-runner:latest
+            dappnode/tropibot:latest test-runner
 
   notify:
     if: always() && needs.sync.result != 'success'
     needs: [sync]
-    uses: dappnode/workflows/.github/workflows/notify-discord.yml@main
+    uses: dappnode/workflows/.github/workflows/notify-discord.yml@master
     with:
       result: ${{ needs.sync.result }}
       test_type: "sync-${{ inputs.execution_client }}"
