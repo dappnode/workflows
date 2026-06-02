@@ -32,21 +32,13 @@ jobs:
           app-id: ${{ vars.TROPI_APP_ID }}
           private-key: ${{ secrets.TROPI_APP_PRIVATE_KEY }}
 
-      - name: Write GitHub App private key
-        run: |
-          printf '%s' "${{ secrets.TROPI_APP_PRIVATE_KEY }}" > "$RUNNER_TEMP/tropi-app.pem"
-          chmod 600 "$RUNNER_TEMP/tropi-app.pem"
-
       - name: Run upstream bump
         run: |
           docker run --rm --pull=always \
-            -e GITHUB_APP_ID="${{ vars.TROPI_APP_ID }}" \
-            -e GITHUB_PRIVATE_KEY_PATH=/work/tropi-app.pem \
-            -e GITHUB_INSTALLATION_ID="${{ steps.app-token.outputs.installation-id }}" \
+            -e GITHUB_TOKEN="${{ steps.app-token.outputs.token }}" \
             -e GITHUB_REPOSITORY="${{ github.repository }}" \
             -e BUMP_FAIL_ON_ERRORS="true" \
             -e USE_VARIANTS="${{ inputs.use_variants }}" \
             -e VARIANTS_DIR="${{ inputs.variants_dir }}" \
-            -v "$RUNNER_TEMP/tropi-app.pem:/work/tropi-app.pem:ro" \
             dappnode/tropibot:latest \
             bump-runner
