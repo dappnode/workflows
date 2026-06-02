@@ -53,6 +53,10 @@ jobs:
         with:
           ref: ${{ inputs.head_ref || github.head_ref || github.ref }}
 
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "22"
+
       - name: Build and upload to IPFS
         run: |
           npx @dappnode/dappnodesdk build \
