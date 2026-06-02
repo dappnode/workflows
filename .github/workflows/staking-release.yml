@@ -13,6 +13,11 @@ on:
         required: false
         type: string
         default: ""
+      execution_client:
+        description: "Execution client for testing"
+        required: false
+        type: string
+        default: ""
       runner_label:
         description: "Self-hosted runner label for build and test"
         required: false
@@ -77,6 +82,7 @@ jobs:
             -v /var/run/docker.sock:/var/run/docker.sock \
             -e MODE=test \
             -e IPFS_HASH=${{ needs.build.outputs.ipfs_hash }} \
+            -e EXECUTION_CLIENT=${{ inputs.execution_client }} \
             -e CONSENSUS_CLIENT=${{ inputs.consensus_client }} \
             -e GITHUB_TOKEN=${{ steps.app-token.outputs.token }} \
             -e GITHUB_REPOSITORY=${{ github.repository }} \
