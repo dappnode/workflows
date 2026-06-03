@@ -10,6 +10,7 @@ Centralized reusable GitHub Actions workflows for the DAppNode organization.
 | [`staking-release.yml`](.github/workflows/staking-release.yml) | Build → test → release pipeline | All staking packages |
 | [`staking-sync-test.yml`](.github/workflows/staking-sync-test.yml) | Sync test on PRs | All staking packages |
 | [`sync-production.yml`](.github/workflows/sync-production.yml) | Daily production sync + Discord notification | EL packages |
+| [`onchain-release-sync.yml`](.github/workflows/onchain-release-sync.yml) | Sync release metadata with on-chain published hashes | Packages that use tropibot onchain sync |
 | [`notify-discord.yml`](.github/workflows/notify-discord.yml) | Discord failure notifications | Internal (called by sync-production) |
 
 ## Usage
@@ -137,6 +138,27 @@ jobs:
     with:
       execution_client: "erigon"
       consensus_client: ${{ inputs.consensus_client || '' }}
+    secrets: inherit
+```
+
+### Onchain Release Sync
+
+```yaml
+name: Onchain Release Sync
+on:
+  schedule:
+    - cron: "00 */6 * * *"
+  workflow_dispatch:
+    inputs:
+      all_repos:
+        type: boolean
+        default: false
+jobs:
+  onchain-sync:
+    uses: dappnode/workflows/.github/workflows/onchain-release-sync.yml@master
+    with:
+      all_repos: ${{ inputs.all_repos || false }}
+      dry_run: ${{ github.event_name == 'workflow_dispatch' }}
     secrets: inherit
 ```
 

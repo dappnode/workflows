@@ -1,0 +1,80 @@
+name: Onchain Release Sync
+
+on:
+  workflow_call:
+    inputs:
+      all_repos:
+        description: "Run org-wide scan instead of single-repo scan"
+        required: false
+        type: boolean
+        default: false
+      graphql_endpoint:
+        description: "DApp Explorer endpoint (POST URL, no /graphql suffix)"
+        required: false
+        type: string
+        default: "https://api.studio.thegraph.com/query/90626/dapp-explorer/version/latest"
+      dry_run:
+        description: "Do not mutate releases"
+        required: false
+        type: boolean
+        default: true
+      fail_on_partial:
+        description: "Fail job if partial sync errors are detected"
+        required: false
+        type: boolean
+        default: false
+      max_repos_per_run:
+        description: "Org scan cap"
+        required: false
+        type: string
+        default: "30"
+      max_releases_per_repo:
+        description: "Per repo release scan cap"
+        required: false
+        type: string
+        default: "20"
+      max_release_age_days:
+        description: "Ignore old releases"
+        required: false
+        type: string
+        default: "120"
+      prerelease_only:
+        description: "Process only prereleases"
+        required: false
+        type: boolean
+        default: true
+    secrets:
+      TROPI_APP_PRIVATE_KEY:
+        required: true
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  onchain-release-sync:
+    runs-on: ubuntu-latest
+    name: Sync Onchain Release Metadata
+    steps:
+      - uses: actions/create-github-app-token@v3
+        id: app-token
+        with:
+          client-id: ${{ vars.TROPI_APP_ID }}
+          private-key: ${{ secrets.TROPI_APP_PRIVATE_KEY }}
+
+      - name: Run onchain release sync
+        run: |
+          docker run --rm --pull=always \
+            -e GITHUB_TOKEN="${{ steps.app-token.outputs.token }}" \
+            -e GITHUB_REPOSITORY="${{ github.repository }}" \
+            -e ONCHAIN_SCAN_ALL="${{ inputs.all_repos }}" \
+            -e ONCHAIN_GRAPHQL_ENDPOINT="${{ inputs.graphql_endpoint }}" \
+            -e DRY_RUN="${{ inputs.dry_run }}" \
+            -e ONCHAIN_FAIL_ON_PARTIAL="${{ inputs.fail_on_partial }}" \
+            -e ONCHAIN_MAX_REPOS_PER_RUN="${{ inputs.max_repos_per_run }}" \
+            -e ONCHAIN_MAX_RELEASES_PER_REPO="${{ inputs.max_releases_per_repo }}" \
+            -e ONCHAIN_MAX_RELEASE_AGE_DAYS="${{ inputs.max_release_age_days }}" \
+            -e ONCHAIN_PRERELEASE_ONLY="${{ inputs.prerelease_only }}" \
+            -e RUST_LOG="info" \
+            dappnode/tropibot:latest \
+            onchain-release-sync-runner
