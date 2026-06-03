@@ -43,6 +43,11 @@ on:
         required: false
         type: boolean
         default: true
+      rust_log:
+        description: "Rust log level"
+        required: false
+        type: string
+        default: "info"
     secrets:
       TROPI_APP_PRIVATE_KEY:
         required: true
@@ -75,6 +80,6 @@ jobs:
             -e ONCHAIN_MAX_RELEASES_PER_REPO="${{ inputs.max_releases_per_repo }}" \
             -e ONCHAIN_MAX_RELEASE_AGE_DAYS="${{ inputs.max_release_age_days }}" \
             -e ONCHAIN_PRERELEASE_ONLY="${{ inputs.prerelease_only }}" \
-            -e RUST_LOG="info" \
+            -e RUST_LOG="${{ inputs.rust_log }}" \
             dappnode/tropibot:latest \
             onchain-release-sync-runner
