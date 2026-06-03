@@ -75,7 +75,7 @@ jobs:
     name: Sync Test
     needs: [build]
     steps:
-      - uses: actions/create-github-app-token@v3n
+      - uses: actions/create-github-app-token@v3
         id: app-token
         with:
           client-id: ${{ vars.TROPI_APP_ID }}
