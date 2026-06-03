@@ -55,7 +55,7 @@ jobs:
 
       - uses: actions/setup-node@v6
         with:
-          node-version: "22"
+          node-version: "24"
 
       - name: Build and upload to IPFS
         run: |
@@ -75,7 +75,7 @@ jobs:
     name: Sync Test
     needs: [build]
     steps:
-      - uses: actions/create-github-app-token@v1
+      - uses: actions/create-github-app-token@v3n
         id: app-token
         with:
           app-id: ${{ vars.TROPI_APP_ID }}
