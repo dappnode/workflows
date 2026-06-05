@@ -3,11 +3,6 @@ name: Onchain Release Sync
 on:
   workflow_call:
     inputs:
-      all_repos:
-        description: "Run org-wide scan instead of single-repo scan"
-        required: false
-        type: boolean
-        default: false
       graphql_endpoint:
         description: "DApp Explorer endpoint (POST URL, no /graphql suffix)"
         required: false
@@ -23,11 +18,6 @@ on:
         required: false
         type: boolean
         default: false
-      max_repos_per_run:
-        description: "Org scan cap"
-        required: false
-        type: string
-        default: "30"
       max_releases_per_repo:
         description: "Per repo release scan cap"
         required: false
@@ -72,11 +62,9 @@ jobs:
           docker run --rm --pull=always \
             -e GITHUB_TOKEN="${{ steps.app-token.outputs.token }}" \
             -e GITHUB_REPOSITORY="${{ github.repository }}" \
-            -e ONCHAIN_SCAN_ALL="${{ inputs.all_repos }}" \
             -e ONCHAIN_GRAPHQL_ENDPOINT="${{ inputs.graphql_endpoint }}" \
             -e DRY_RUN="${{ inputs.dry_run }}" \
             -e ONCHAIN_FAIL_ON_PARTIAL="${{ inputs.fail_on_partial }}" \
-            -e ONCHAIN_MAX_REPOS_PER_RUN="${{ inputs.max_repos_per_run }}" \
             -e ONCHAIN_MAX_RELEASES_PER_REPO="${{ inputs.max_releases_per_repo }}" \
             -e ONCHAIN_MAX_RELEASE_AGE_DAYS="${{ inputs.max_release_age_days }}" \
             -e ONCHAIN_PRERELEASE_ONLY="${{ inputs.prerelease_only }}" \
