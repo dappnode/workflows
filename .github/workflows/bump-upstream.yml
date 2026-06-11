@@ -13,6 +13,21 @@ on:
         required: false
         type: string
         default: "variants"
+      tag_pattern:
+        description: "Optional regex to extract version from the upstream release tag"
+        required: false
+        type: string
+        default: ""
+      build_arg:
+        description: "Optional compose build arg override for the targeted upstream"
+        required: false
+        type: string
+        default: ""
+      upstream_repo:
+        description: "Optional upstream repo slug to target env overrides at a specific dependency"
+        required: false
+        type: string
+        default: ""
     secrets:
       TROPI_APP_PRIVATE_KEY:
         required: true
@@ -33,12 +48,36 @@ jobs:
           private-key: ${{ secrets.TROPI_APP_PRIVATE_KEY }}
 
       - name: Run upstream bump
+        env:
+          APP_TOKEN: ${{ steps.app-token.outputs.token }}
+          INPUT_USE_VARIANTS: ${{ inputs.use_variants }}
+          INPUT_VARIANTS_DIR: ${{ inputs.variants_dir }}
+          INPUT_TAG_PATTERN: ${{ inputs.tag_pattern }}
+          INPUT_BUILD_ARG: ${{ inputs.build_arg }}
+          INPUT_UPSTREAM_REPO: ${{ inputs.upstream_repo }}
         run: |
-          docker run --rm --pull=always \
-            -e GITHUB_TOKEN="${{ steps.app-token.outputs.token }}" \
-            -e GITHUB_REPOSITORY="${{ github.repository }}" \
-            -e BUMP_FAIL_ON_ERRORS="true" \
-            -e USE_VARIANTS="${{ inputs.use_variants }}" \
-            -e VARIANTS_DIR="${{ inputs.variants_dir }}" \
-            dappnode/tropibot:latest \
-            bump-runner
+          set -euo pipefail
+
+          docker_args=(
+            --rm
+            --pull=always
+            -e "GITHUB_TOKEN=${APP_TOKEN}"
+            -e "GITHUB_REPOSITORY=${GITHUB_REPOSITORY}"
+            -e "BUMP_FAIL_ON_ERRORS=true"
+            -e "USE_VARIANTS=${INPUT_USE_VARIANTS}"
+            -e "VARIANTS_DIR=${INPUT_VARIANTS_DIR}"
+          )
+
+          if [[ -n "${INPUT_TAG_PATTERN}" ]]; then
+            docker_args+=(-e "TAG_PATTERN=${INPUT_TAG_PATTERN}")
+          fi
+
+          if [[ -n "${INPUT_BUILD_ARG}" ]]; then
+            docker_args+=(-e "BUILD_ARG=${INPUT_BUILD_ARG}")
+          fi
+
+          if [[ -n "${INPUT_UPSTREAM_REPO}" ]]; then
+            docker_args+=(-e "UPSTREAM_REPO=${INPUT_UPSTREAM_REPO}")
+          fi
+
+          docker run "${docker_args[@]}" dappnode/tropibot:latest bump-runner
