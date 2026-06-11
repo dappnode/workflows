@@ -33,6 +33,21 @@ jobs:
     secrets: inherit
 ```
 
+Optional override inputs are available for repos that need explicit TropiBot bump configuration:
+
+```yaml
+jobs:
+  bump-upstream:
+    uses: dappnode/workflows/.github/workflows/bump-upstream.yml@master
+    with:
+      upstream_repo: "testinprod-io/op-erigon"
+      tag_pattern: "^v(.+)$"
+    secrets: inherit
+```
+
+For repos with mixed upstream version formats, omit override inputs and let `bump-runner`
+resolve the target Docker tag format per upstream through its registry inference path.
+
 ### Release (Execution Client)
 
 ```yaml
