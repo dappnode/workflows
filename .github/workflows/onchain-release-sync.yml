@@ -7,7 +7,7 @@ on:
         description: "DApp Explorer endpoint (POST URL, no /graphql suffix)"
         required: false
         type: string
-        default: "https://api.studio.thegraph.com/query/90626/dapp-explorer/version/latest"
+        default: "https://gateway.thegraph.com/api/subgraphs/id/AnR9aNC4rEFzoCy44wcLHr3CmSpoCrKizPT8GMkKb8z5"
       dry_run:
         description: "Do not mutate releases"
         required: false
@@ -41,6 +41,8 @@ on:
     secrets:
       TROPI_APP_PRIVATE_KEY:
         required: true
+      ONCHAIN_GRAPHQL_BEARER_TOKEN:
+        required: true
 
 permissions:
   contents: write
@@ -63,6 +65,7 @@ jobs:
             -e GITHUB_TOKEN="${{ steps.app-token.outputs.token }}" \
             -e GITHUB_REPOSITORY="${{ github.repository }}" \
             -e ONCHAIN_GRAPHQL_ENDPOINT="${{ inputs.graphql_endpoint }}" \
+            -e ONCHAIN_GRAPHQL_BEARER_TOKEN="${{ secrets.ONCHAIN_GRAPHQL_BEARER_TOKEN }}" \
             -e DRY_RUN="${{ inputs.dry_run }}" \
             -e ONCHAIN_FAIL_ON_PARTIAL="${{ inputs.fail_on_partial }}" \
             -e ONCHAIN_MAX_RELEASES_PER_REPO="${{ inputs.max_releases_per_repo }}" \
