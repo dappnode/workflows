@@ -18,6 +18,11 @@ on:
         required: false
         type: string
         default: ""
+      docker_tag_pattern:
+        description: "Optional template for Docker tag checks, e.g. multiarch-{version}"
+        required: false
+        type: string
+        default: ""
       build_arg:
         description: "Optional compose build arg override for the targeted upstream"
         required: false
@@ -28,6 +33,11 @@ on:
         required: false
         type: string
         default: ""
+      dry_run:
+        description: "If true, log write operations without executing them"
+        required: false
+        type: boolean
+        default: false
     secrets:
       TROPI_APP_PRIVATE_KEY:
         required: true
@@ -53,8 +63,10 @@ jobs:
           INPUT_USE_VARIANTS: ${{ inputs.use_variants }}
           INPUT_VARIANTS_DIR: ${{ inputs.variants_dir }}
           INPUT_TAG_PATTERN: ${{ inputs.tag_pattern }}
+          INPUT_DOCKER_TAG_PATTERN: ${{ inputs.docker_tag_pattern }}
           INPUT_BUILD_ARG: ${{ inputs.build_arg }}
           INPUT_UPSTREAM_REPO: ${{ inputs.upstream_repo }}
+          INPUT_DRY_RUN: ${{ inputs.dry_run }}
         run: |
           set -euo pipefail
 
@@ -66,10 +78,15 @@ jobs:
             -e "BUMP_FAIL_ON_ERRORS=true"
             -e "USE_VARIANTS=${INPUT_USE_VARIANTS}"
             -e "VARIANTS_DIR=${INPUT_VARIANTS_DIR}"
+            -e "DRY_RUN=${INPUT_DRY_RUN}"
           )
 
           if [[ -n "${INPUT_TAG_PATTERN}" ]]; then
             docker_args+=(-e "TAG_PATTERN=${INPUT_TAG_PATTERN}")
+          fi
+
+          if [[ -n "${INPUT_DOCKER_TAG_PATTERN}" ]]; then
+            docker_args+=(-e "DOCKER_TAG_PATTERN=${INPUT_DOCKER_TAG_PATTERN}")
           fi
 
           if [[ -n "${INPUT_BUILD_ARG}" ]]; then
