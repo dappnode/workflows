@@ -38,6 +38,11 @@ on:
         required: false
         type: string
         default: ""
+      ipfs_hash:
+        description: "Optional pre-built IPFS hash; when set, the test job prefers it over the freshly built hash"
+        required: false
+        type: string
+        default: ""
     secrets:
       TROPI_APP_PRIVATE_KEY:
         required: true
@@ -88,7 +93,7 @@ jobs:
           docker run --rm --pull=always --network dncore_network \
             -v /var/run/docker.sock:/var/run/docker.sock \
             -e MODE=sync \
-            -e IPFS_HASH=${{ needs.build.outputs.ipfs_hash }} \
+            -e IPFS_HASH=${{ inputs.ipfs_hash || needs.build.outputs.ipfs_hash }} \
             -e EXECUTION_CLIENT=${{ inputs.execution_client }} \
             -e CONSENSUS_CLIENT=${{ inputs.consensus_client }} \
             -e GITHUB_TOKEN=${{ steps.app-token.outputs.token }} \
