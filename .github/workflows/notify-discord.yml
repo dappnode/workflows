@@ -20,9 +20,12 @@ jobs:
     if: inputs.result != 'success'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
+          repository: dappnode/workflows
+          ref: master
           sparse-checkout: scripts
+          sparse-checkout-cone-mode: false
 
       - name: Send Discord notification
         run: bash scripts/discord-notify.sh
