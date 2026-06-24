@@ -51,7 +51,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
         with:
-          ref: ${{ inputs.head_ref || github.head_ref || github.ref }}
+          ref: ${{ inputs.head_ref || github.event.client_payload.head_ref || github.head_ref || github.ref }}
 
       - uses: actions/setup-node@v6
         with:
@@ -83,7 +83,7 @@ jobs:
 
       - name: Run attestation test
         env:
-          PR_NUMBER: ${{ inputs.pr_number || github.event.pull_request.number || github.event.number }}
+          PR_NUMBER: ${{ inputs.pr_number || github.event.client_payload.pr_number || github.event.pull_request.number || github.event.number }}
         run: |
           docker run --rm --pull=always --network dncore_network \
             -v /var/run/docker.sock:/var/run/docker.sock \
