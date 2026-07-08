@@ -14,6 +14,8 @@ on:
         type: string
         default: ""
     secrets:
+      TROPI_APP_PRIVATE_KEY:
+        required: true
       PINATA_API_KEY:
         required: true
       PINATA_SECRET_API_KEY:
@@ -27,6 +29,12 @@ jobs:
       contents: read
       pull-requests: write
     steps:
+      - uses: actions/create-github-app-token@v3
+        id: app-token
+        with:
+          client-id: ${{ vars.TROPI_APP_ID }}
+          private-key: ${{ secrets.TROPI_APP_PRIVATE_KEY }}
+
       - uses: actions/checkout@v7
 
       - uses: actions/setup-node@v4
@@ -35,7 +43,7 @@ jobs:
 
       - name: Build and pin to IPFS, post PR comment
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
           PINATA_API_KEY: ${{ secrets.PINATA_API_KEY }}
           PINATA_SECRET_API_KEY: ${{ secrets.PINATA_SECRET_API_KEY }}
           INPUT_ALL_VARIANTS: ${{ inputs.all_variants }}
