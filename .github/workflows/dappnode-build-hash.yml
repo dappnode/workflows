@@ -1,0 +1,54 @@
+name: DAppNode Build Hash
+
+on:
+  workflow_call:
+    inputs:
+      all_variants:
+        description: "Build all package variants defined in the repo"
+        required: false
+        type: boolean
+        default: false
+      variants:
+        description: "Comma-separated list of variants to build (e.g. 'gnosis,mainnet,hoodi')"
+        required: false
+        type: string
+        default: ""
+    secrets:
+      PINATA_API_KEY:
+        required: true
+      PINATA_SECRET_API_KEY:
+        required: true
+
+jobs:
+  build-hash:
+    runs-on: ubuntu-latest
+    name: Build and post IPFS hash
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+
+      - name: Build and pin to IPFS, post PR comment
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PINATA_API_KEY: ${{ secrets.PINATA_API_KEY }}
+          PINATA_SECRET_API_KEY: ${{ secrets.PINATA_SECRET_API_KEY }}
+          INPUT_ALL_VARIANTS: ${{ inputs.all_variants }}
+          INPUT_VARIANTS: ${{ inputs.variants }}
+        run: |
+          set -euo pipefail
+
+          args=(github-action build)
+          if [ "${INPUT_ALL_VARIANTS}" = "true" ]; then
+            args+=(--all_variants)
+          fi
+          if [ -n "${INPUT_VARIANTS:-}" ]; then
+            args+=(--variant "${INPUT_VARIANTS}")
+          fi
+
+          npx @dappnode/dappnodesdk "${args[@]}"

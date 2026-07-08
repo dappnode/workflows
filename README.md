@@ -11,6 +11,7 @@ Centralized reusable GitHub Actions workflows for the DAppNode organization.
 | [`staking-sync-test.yml`](.github/workflows/staking-sync-test.yml) | Sync test on PRs | All staking packages |
 | [`sync-production.yml`](.github/workflows/sync-production.yml) | Daily production sync + Discord notification | EL packages |
 | [`onchain-release-sync.yml`](.github/workflows/onchain-release-sync.yml) | Sync release metadata with on-chain published hashes | Packages that use tropibot onchain sync |
+| [`dappnode-build-hash.yml`](.github/workflows/dappnode-build-hash.yml) | Build on PR / push, pin to IPFS, post IPFS hash comment on the PR | All DAppNode packages |
 | [`notify-discord.yml`](.github/workflows/notify-discord.yml) | Discord failure notifications | Internal (called by sync-production) |
 
 ## Usage
@@ -176,6 +177,55 @@ jobs:
       dry_run: ${{ github.event_name == 'workflow_dispatch' }}
     secrets: inherit
 ```
+
+### Build Hash (PR / push)
+
+Builds the package on every push and PR, pins the result to IPFS via Pinata, and
+posts a comment with the install link on the triggering PR. Run on any non-`main` /
+non-`master` branch push (tropibot bump branches qualify) plus on PRs for fast feedback.
+
+```yaml
+name: Build
+on:
+  workflow_dispatch:
+  pull_request:
+  push:
+    paths-ignore: ["README.md"]
+jobs:
+  build:
+    uses: dappnode/workflows/.github/workflows/dappnode-build-hash.yml@master
+    secrets: inherit
+```
+
+For packages that publish multiple variants (e.g. `gnosis`, `mainnet`, `hoodi`):
+
+```yaml
+jobs:
+  build:
+    uses: dappnode/workflows/.github/workflows/dappnode-build-hash.yml@master
+    with:
+      all_variants: true
+    secrets: inherit
+```
+
+Or pick a specific subset:
+
+```yaml
+jobs:
+  build:
+    uses: dappnode/workflows/.github/workflows/dappnode-build-hash.yml@master
+    with:
+      variants: "gnosis,mainnet,hoodi"
+    secrets: inherit
+```
+
+Notes:
+- The workflow auto-detects the GitHub event; on `push` to a non-default branch it
+  builds + pins to Pinata and comments the PR, on `pull_request` it runs a
+  `--skip_save` build only.
+- The caller must have `PINATA_API_KEY` and `PINATA_SECRET_API_KEY` available as
+  repository or org-level secrets (use `secrets: inherit`).
+
 
 ## Packages Using These Workflows
 
