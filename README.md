@@ -9,6 +9,7 @@ Centralized reusable GitHub Actions workflows for the DAppNode organization.
 | [`bump-upstream.yml`](.github/workflows/bump-upstream.yml) | Check and bump upstream versions (tropibot bump-runner) | All staking packages |
 | [`staking-release.yml`](.github/workflows/staking-release.yml) | Build → test → release pipeline | All staking packages |
 | [`staking-sync-test.yml`](.github/workflows/staking-sync-test.yml) | Sync test on PRs | All staking packages |
+| [`staking-attestation-test.yml`](.github/workflows/staking-attestation-test.yml) | Full proof-of-attestation test | Staking packages using TropiBot commands |
 | [`sync-production.yml`](.github/workflows/sync-production.yml) | Daily production sync + Discord notification | EL packages |
 | [`onchain-release-sync.yml`](.github/workflows/onchain-release-sync.yml) | Sync release metadata with on-chain published hashes | Packages that use tropibot onchain sync |
 | [`dappnode-build-hash.yml`](.github/workflows/dappnode-build-hash.yml) | Build on PR / push, pin to IPFS, post IPFS hash comment on the PR | All DAppNode packages |
@@ -133,6 +134,39 @@ jobs:
     with:
       consensus_client: "lodestar"
       execution_client: ${{ inputs.execution_client || '' }}
+    secrets: inherit
+```
+
+### TropiBot Sync and Attestation Commands
+
+`staking-sync-test.yml` and `staking-attestation-test.yml` share the same
+artifact-selection inputs:
+
+- Without `ipfs_hash`, the workflow checks out and builds the exact PR head.
+- With `ipfs_hash`, the build job is skipped and the supplied artifact is tested.
+- `head_sha` records the PR commit associated with the completed report. Existing
+  repository-dispatch callers remain compatible because the workflows also read
+  `github.event.client_payload.head_sha` directly.
+
+Example attestation caller:
+
+```yaml
+name: Proof of Attestation
+on:
+  repository_dispatch:
+    types: [tropibot-attestation-test]
+
+jobs:
+  attestation-test:
+    uses: dappnode/workflows/.github/workflows/staking-attestation-test.yml@master
+    with:
+      execution_client: "besu"
+      consensus_client: ${{ github.event.client_payload.consensus_client || '' }}
+      ipfs_hash: ${{ github.event.client_payload.ipfs_hash || '' }}
+      pr_number: ${{ github.event.client_payload.pr_number || '' }}
+      head_ref: ${{ github.event.client_payload.head_ref || '' }}
+      head_sha: ${{ github.event.client_payload.head_sha || '' }}
+      sender: ${{ github.event.client_payload.sender || github.actor }}
     secrets: inherit
 ```
 

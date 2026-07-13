@@ -33,13 +33,18 @@ on:
         required: false
         type: string
         default: ""
+      head_sha:
+        description: "Exact PR head commit to check out and associate with the report"
+        required: false
+        type: string
+        default: ""
       sender:
         description: "User who triggered the test"
         required: false
         type: string
         default: ""
       ipfs_hash:
-        description: "Optional pre-built IPFS hash; when set, the test job prefers it over the freshly built hash"
+        description: "Optional pre-built IPFS hash; when set, skip the package build"
         required: false
         type: string
         default: ""
@@ -49,14 +54,20 @@ on:
 
 jobs:
   build:
+    if: inputs.ipfs_hash == ''
     runs-on: ${{ inputs.runner_label }}
     name: Build Package
     outputs:
       ipfs_hash: ${{ steps.extract_hash.outputs.ipfs_hash }}
+      head_sha: ${{ steps.resolve_head.outputs.head_sha }}
     steps:
       - uses: actions/checkout@v6
         with:
-          ref: ${{ inputs.head_ref || github.event.client_payload.head_ref || github.head_ref || github.ref }}
+          ref: ${{ inputs.head_sha || github.event.client_payload.head_sha || github.event.pull_request.head.sha || inputs.head_ref || github.event.client_payload.head_ref || github.head_ref || github.ref }}
+
+      - name: Resolve checked-out commit
+        id: resolve_head
+        run: echo "head_sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
       - uses: actions/setup-node@v6
         with:
@@ -79,6 +90,7 @@ jobs:
     runs-on: ${{ inputs.runner_label }}
     name: Proof of Attestation
     needs: [build]
+    if: ${{ always() && (inputs.ipfs_hash != '' || needs.build.result == 'success') }}
     steps:
       - uses: actions/create-github-app-token@v3
         id: app-token
@@ -101,4 +113,5 @@ jobs:
             -e GITHUB_PR_NUMBER=${PR_NUMBER} \
             -e GITHUB_RUN_ID=${{ github.run_id }} \
             -e GITHUB_SERVER_URL=${{ github.server_url }} \
+            -e GITHUB_HEAD_SHA=${{ needs.build.outputs.head_sha || inputs.head_sha || github.event.client_payload.head_sha || github.event.pull_request.head.sha || github.sha }} \
             dappnode/tropibot:latest test-runner
