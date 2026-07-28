@@ -99,7 +99,8 @@ jobs:
   release:
     runs-on: ${{ inputs.publish_runner_label }}
     name: Release
-    needs: ${{ inputs.skip_tests && 'build' || 'test' }}
+    needs: [build, test]
+    if: ${{ inputs.skip_tests || needs.test.result == 'success' }}
     steps:
       - uses: actions/checkout@v6
 
