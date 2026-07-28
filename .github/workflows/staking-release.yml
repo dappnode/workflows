@@ -72,6 +72,7 @@ jobs:
     runs-on: ${{ inputs.runner_label }}
     name: Test
     needs: [build]
+    if: ${{ !inputs.skip_tests }}
     steps:
       - uses: actions/checkout@v6
 
@@ -100,7 +101,7 @@ jobs:
     runs-on: ${{ inputs.publish_runner_label }}
     name: Release
     needs: [build, test]
-    if: ${{ inputs.skip_tests || needs.test.result == 'success' }}
+    if: ${{ always() && !cancelled() && needs.build.result == 'success' && (inputs.skip_tests || needs.test.result == 'success') }}
     steps:
       - uses: actions/checkout@v6
 
