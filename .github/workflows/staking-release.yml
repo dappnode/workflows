@@ -33,6 +33,11 @@ on:
         required: false
         type: string
         default: "2h"
+      skip_tests:
+        description: "Skip the test job and publish directly after build"
+        required: false
+        type: boolean
+        default: false
     secrets:
       TROPI_APP_PRIVATE_KEY:
         required: true
@@ -94,7 +99,7 @@ jobs:
   release:
     runs-on: ${{ inputs.publish_runner_label }}
     name: Release
-    needs: [test]
+    needs: ${{ inputs.skip_tests && 'build' || 'test' }}
     steps:
       - uses: actions/checkout@v6
 
