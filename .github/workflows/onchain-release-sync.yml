@@ -60,9 +60,12 @@ jobs:
           private-key: ${{ secrets.TROPI_APP_PRIVATE_KEY }}
 
       - name: Run onchain release sync
+        env:
+          GITHUB_APP_ID: ${{ vars.TROPI_APP_ID }}
         run: |
           docker run --rm --pull=always \
             -e GITHUB_TOKEN="${{ steps.app-token.outputs.token }}" \
+            -e GITHUB_APP_ID \
             -e GITHUB_REPOSITORY="${{ github.repository }}" \
             -e ONCHAIN_GRAPHQL_ENDPOINT="${{ inputs.graphql_endpoint }}" \
             -e ONCHAIN_GRAPHQL_BEARER_TOKEN="${{ secrets.ONCHAIN_GRAPHQL_BEARER_TOKEN }}" \
