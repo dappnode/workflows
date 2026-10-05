@@ -83,6 +83,8 @@ jobs:
           private-key: ${{ secrets.TROPI_APP_PRIVATE_KEY }}
 
       - name: Run staker test
+        env:
+          GITHUB_APP_ID: ${{ vars.TROPI_APP_ID }}
         run: |
           docker run --rm --pull=always --network dncore_network \
             -v /var/run/docker.sock:/var/run/docker.sock \
@@ -91,6 +93,7 @@ jobs:
             -e EXECUTION_CLIENT=${{ inputs.execution_client }} \
             -e CONSENSUS_CLIENT=${{ inputs.consensus_client }} \
             -e GITHUB_TOKEN=${{ steps.app-token.outputs.token }} \
+            -e GITHUB_APP_ID \
             -e GITHUB_REPOSITORY=${{ github.repository }} \
             -e GITHUB_PR_NUMBER=${{ github.event.pull_request.number }} \
             -e GITHUB_RUN_ID=${{ github.run_id }} \

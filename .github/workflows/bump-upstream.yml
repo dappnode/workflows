@@ -59,6 +59,7 @@ jobs:
 
       - name: Run upstream bump
         env:
+          GITHUB_APP_ID: ${{ vars.TROPI_APP_ID }}
           APP_TOKEN: ${{ steps.app-token.outputs.token }}
           INPUT_USE_VARIANTS: ${{ inputs.use_variants }}
           INPUT_VARIANTS_DIR: ${{ inputs.variants_dir }}
@@ -74,6 +75,7 @@ jobs:
             --rm
             --pull=always
             -e "GITHUB_TOKEN=${APP_TOKEN}"
+            -e GITHUB_APP_ID
             -e "GITHUB_REPOSITORY=${GITHUB_REPOSITORY}"
             -e "BUMP_FAIL_ON_ERRORS=true"
             -e "USE_VARIANTS=${INPUT_USE_VARIANTS}"

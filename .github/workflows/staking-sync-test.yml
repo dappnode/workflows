@@ -100,6 +100,7 @@ jobs:
 
       - name: Run sync test
         env:
+          GITHUB_APP_ID: ${{ vars.TROPI_APP_ID }}
           PR_NUMBER: ${{ inputs.pr_number || github.event.client_payload.pr_number || github.event.pull_request.number || github.event.number }}
         run: |
           docker run --rm --pull=always --network dncore_network \
@@ -109,6 +110,7 @@ jobs:
             -e EXECUTION_CLIENT=${{ inputs.execution_client }} \
             -e CONSENSUS_CLIENT=${{ inputs.consensus_client }} \
             -e GITHUB_TOKEN=${{ steps.app-token.outputs.token }} \
+            -e GITHUB_APP_ID \
             -e GITHUB_REPOSITORY=${{ github.repository }} \
             -e GITHUB_PR_NUMBER=${PR_NUMBER} \
             -e GITHUB_RUN_ID=${{ github.run_id }} \
