@@ -22,6 +22,8 @@ jobs:
     steps:
       - uses: actions/checkout@v6
         with:
+          repository: dappnode/workflows
+          ref: master
           sparse-checkout: scripts
 
       - name: Send Discord notification
