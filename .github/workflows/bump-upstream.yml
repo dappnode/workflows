@@ -9,10 +9,10 @@ on:
         type: boolean
         default: true
       variants_dir:
-        description: "Path to variants directory"
+        description: "Path to SDK package variants (override for legacy layouts)"
         required: false
         type: string
-        default: "variants"
+        default: "package_variants"
       tag_pattern:
         description: "Optional regex to extract version from the upstream release tag"
         required: false
