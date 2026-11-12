@@ -64,7 +64,22 @@ For repos with mixed upstream version formats, omit override inputs and let `bum
 
 The run's result (bumped, up to date, skipped, errors) is written to the job summary. The job fails when any upstream fails.
 
-Packages that need their own triggers, reviewers, or labels can instead update files with the [`dappnode/tropibot/actions/bump-upstream`](https://github.com/dappnode/tropibot/tree/master/actions/bump-upstream) action and open the PR themselves.
+Packages that need their own triggers, reviewers, or labels can instead update files with the [`bump-upstream` action](actions/bump-upstream/action.yml) and open the PR themselves:
+
+```yaml
+steps:
+  - uses: actions/checkout@v6
+  - id: bump
+    uses: dappnode/workflows/actions/bump-upstream@master
+    with:
+      version: ${{ github.event.inputs.version }} # empty: latest version
+      pin-digest: "true"
+      provider: docker_tags # when versions come from image tags, not GitHub releases
+  # Then open the PR, e.g. with peter-evans/create-pull-request, using
+  # steps.bump.outputs.version and steps.bump.outputs.compose-version.
+```
+
+The action edits files only (no commit or PR). Outputs: `version`, `compose-version` (including the digest when pinned), `digest`, `changed`, `upstream`, and `previous-version`. It wraps [`dappnode/tropibot/actions/bump-upstream`](https://github.com/dappnode/tropibot/tree/master/actions/bump-upstream), which documents every input.
 
 ### Release (Execution Client)
 
