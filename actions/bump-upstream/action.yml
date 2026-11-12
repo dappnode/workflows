@@ -1,0 +1,81 @@
+name: Bump upstream
+description: >-
+  Update a DAppNode package's upstream version in the checked-out workspace:
+  the plain version in dappnode_package.json and the (optionally
+  digest-pinned) value in docker-compose.yml. Does not commit, push, or open
+  pull requests. Wraps dappnode/tropibot/actions/bump-upstream.
+author: DAppNode
+
+inputs:
+  version:
+    description: Upstream tag or version to apply. Empty resolves the latest version (never a downgrade).
+    required: false
+    default: ""
+  pin-digest:
+    description: '"true" writes VERSION@sha256:DIGEST to Compose, "false" writes plain versions, empty keeps existing pinning.'
+    required: false
+    default: ""
+  image:
+    description: Image repository without tag or digest. Empty uses the Dockerfile FROM image.
+    required: false
+    default: ""
+  upstream:
+    description: Upstream repository (owner/repo) to update. Required when the manifest declares several.
+    required: false
+    default: ""
+  provider:
+    description: "Version source when version is empty: docker, github, or docker_tags. Empty uses the package's default."
+    required: false
+    default: ""
+  token:
+    description: GitHub token for upstream release lookups.
+    required: false
+    default: ${{ github.token }}
+  workspace:
+    description: Package directory, relative to the job's working directory.
+    required: false
+    default: "."
+  dry-run:
+    description: '"true" reports the planned changes without writing files.'
+    required: false
+    default: "false"
+  runner-image:
+    description: TropiBot image providing bump-runner. Empty uses docker.io/dappnode/tropibot:latest.
+    required: false
+    default: ""
+
+outputs:
+  version:
+    description: Plain resolved version written to the manifest.
+    value: ${{ steps.bump.outputs.version }}
+  compose-version:
+    description: Exact Compose value, including the digest when pinned.
+    value: ${{ steps.bump.outputs.compose-version }}
+  digest:
+    description: Resolved image digest, or empty when not pinned.
+    value: ${{ steps.bump.outputs.digest }}
+  changed:
+    description: '"true" when package files changed (or would change in a dry run).'
+    value: ${{ steps.bump.outputs.changed }}
+  upstream:
+    description: Upstream repository that was updated.
+    value: ${{ steps.bump.outputs.upstream }}
+  previous-version:
+    description: Manifest version before the update.
+    value: ${{ steps.bump.outputs.previous-version }}
+
+runs:
+  using: composite
+  steps:
+    - id: bump
+      uses: dappnode/tropibot/actions/bump-upstream@master
+      with:
+        version: ${{ inputs.version }}
+        pin-digest: ${{ inputs.pin-digest }}
+        image: ${{ inputs.image }}
+        upstream: ${{ inputs.upstream }}
+        provider: ${{ inputs.provider }}
+        token: ${{ inputs.token }}
+        workspace: ${{ inputs.workspace }}
+        dry-run: ${{ inputs.dry-run }}
+        runner-image: ${{ inputs.runner-image }}
