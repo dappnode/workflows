@@ -1,18 +1,20 @@
 name: Bump upstream
 description: >-
-  Update a DAppNode package's upstream version in the checked-out workspace:
-  the plain version in dappnode_package.json and the (optionally
-  digest-pinned) value in docker-compose.yml. Does not commit, push, or open
-  pull requests. Wraps dappnode/tropibot/actions/bump-upstream.
+  Update a DAppNode package's upstream version in the checked-out workspace
+  with `bump-runner update`: the plain version in dappnode_package.json and the
+  (optionally digest-pinned) value in docker-compose.yml. Does not commit,
+  push, open pull requests, or bump the package's own version.
 author: DAppNode
 
 inputs:
   version:
-    description: Upstream tag or version to apply. Empty resolves the latest version (never a downgrade).
+    description: Upstream tag or version to apply. Empty resolves the latest upstream release (never a downgrade).
     required: false
     default: ""
   pin-digest:
-    description: '"true" writes VERSION@sha256:DIGEST to Compose, "false" writes plain versions, empty keeps existing pinning.'
+    description: >-
+      "true" writes VERSION@sha256:DIGEST to Compose, "false" writes plain
+      versions, empty keeps the package's existing pinning (refreshing digests).
     required: false
     default: ""
   image:
@@ -24,7 +26,11 @@ inputs:
     required: false
     default: ""
   provider:
-    description: "Version source when version is empty: docker, github, or docker_tags. Empty uses the package's default."
+    description: >-
+      Version source when `version` is empty: docker (GitHub release validated
+      against the image tag), github (release tag as-is), or docker_tags
+      (highest image tag of the Dockerfile image, on Docker Hub or any OCI
+      registry). Empty uses the package's default.
     required: false
     default: ""
   token:
@@ -40,42 +46,46 @@ inputs:
     required: false
     default: "false"
   runner-image:
-    description: TropiBot image providing bump-runner. Empty uses docker.io/dappnode/tropibot:latest.
+    description: >-
+      TropiBot image providing bump-runner, e.g.
+      docker.io/dappnode/tropibot:v0.1.14 to pin a release. Empty uses
+      docker.io/dappnode/tropibot:latest.
     required: false
     default: ""
 
 outputs:
   version:
     description: Plain resolved version written to the manifest.
-    value: ${{ steps.bump.outputs.version }}
+    value: ${{ steps.update.outputs.version }}
   compose-version:
     description: Exact Compose value, including the digest when pinned.
-    value: ${{ steps.bump.outputs.compose-version }}
+    value: ${{ steps.update.outputs.compose-version }}
   digest:
     description: Resolved image digest, or empty when not pinned.
-    value: ${{ steps.bump.outputs.digest }}
+    value: ${{ steps.update.outputs.digest }}
   changed:
     description: '"true" when package files changed (or would change in a dry run).'
-    value: ${{ steps.bump.outputs.changed }}
+    value: ${{ steps.update.outputs.changed }}
   upstream:
     description: Upstream repository that was updated.
-    value: ${{ steps.bump.outputs.upstream }}
+    value: ${{ steps.update.outputs.upstream }}
   previous-version:
     description: Manifest version before the update.
-    value: ${{ steps.bump.outputs.previous-version }}
+    value: ${{ steps.update.outputs.previous-version }}
 
 runs:
   using: composite
   steps:
-    - id: bump
-      uses: dappnode/tropibot/actions/bump-upstream@master
-      with:
-        version: ${{ inputs.version }}
-        pin-digest: ${{ inputs.pin-digest }}
-        image: ${{ inputs.image }}
-        upstream: ${{ inputs.upstream }}
-        provider: ${{ inputs.provider }}
-        token: ${{ inputs.token }}
-        workspace: ${{ inputs.workspace }}
-        dry-run: ${{ inputs.dry-run }}
-        runner-image: ${{ inputs.runner-image }}
+    - id: update
+      shell: bash
+      env:
+        INPUT_VERSION: ${{ inputs.version }}
+        INPUT_PIN_DIGEST: ${{ inputs.pin-digest }}
+        INPUT_IMAGE: ${{ inputs.image }}
+        INPUT_UPSTREAM: ${{ inputs.upstream }}
+        INPUT_PROVIDER: ${{ inputs.provider }}
+        INPUT_WORKSPACE: ${{ inputs.workspace }}
+        INPUT_DRY_RUN: ${{ inputs.dry-run }}
+        INPUT_RUNNER_IMAGE: ${{ inputs.runner-image }}
+        GITHUB_TOKEN: ${{ inputs.token }}
+      run: '"$GITHUB_ACTION_PATH/run.sh"'

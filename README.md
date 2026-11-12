@@ -79,7 +79,7 @@ steps:
   # steps.bump.outputs.version and steps.bump.outputs.compose-version.
 ```
 
-The action edits files only (no commit or PR). Outputs: `version`, `compose-version` (including the digest when pinned), `digest`, `changed`, `upstream`, and `previous-version`. It wraps [`dappnode/tropibot/actions/bump-upstream`](https://github.com/dappnode/tropibot/tree/master/actions/bump-upstream), which documents every input.
+The action edits files only (no commit or PR). Outputs: `version`, `compose-version` (including the digest when pinned), `digest`, `changed`, `upstream`, and `previous-version`. It runs `bump-runner update` from the public `dappnode/tropibot:latest` image (set `runner-image`, e.g. `dappnode/tropibot:v0.1.14`, to pin a release) and needs a Linux runner with Docker. See [action.yml](actions/bump-upstream/action.yml) for every input.
 
 ### Release (Execution Client)
 
