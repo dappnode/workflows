@@ -4,15 +4,15 @@ on:
   workflow_call:
     inputs:
       use_variants:
-        description: "Include variant manifests/compose files in bump scan"
+        description: "Deprecated, no effect: variant directories are always scanned"
         required: false
         type: boolean
         default: true
       variants_dir:
-        description: "Path to variants directory"
+        description: "Path to SDK package variants (override for legacy layouts)"
         required: false
         type: string
-        default: "variants"
+        default: "package_variants"
       tag_pattern:
         description: "Optional regex to extract version from the upstream release tag"
         required: false
@@ -23,13 +23,18 @@ on:
         required: false
         type: string
         default: ""
+      provider:
+        description: "Optional version source for the targeted upstream: docker, github, or docker_tags"
+        required: false
+        type: string
+        default: ""
       build_arg:
         description: "Optional compose build arg override for the targeted upstream"
         required: false
         type: string
         default: ""
       upstream_repo:
-        description: "Optional upstream repo slug to target env overrides at a specific dependency"
+        description: "Optional upstream repo slug the override inputs apply to (default: all upstreams)"
         required: false
         type: string
         default: ""
@@ -59,10 +64,10 @@ jobs:
 
       - name: Run upstream bump
         env:
+          GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
           GITHUB_APP_ID: ${{ vars.TROPI_APP_ID }}
-          APP_TOKEN: ${{ steps.app-token.outputs.token }}
-          INPUT_USE_VARIANTS: ${{ inputs.use_variants }}
           INPUT_VARIANTS_DIR: ${{ inputs.variants_dir }}
+          INPUT_PROVIDER: ${{ inputs.provider }}
           INPUT_TAG_PATTERN: ${{ inputs.tag_pattern }}
           INPUT_DOCKER_TAG_PATTERN: ${{ inputs.docker_tag_pattern }}
           INPUT_BUILD_ARG: ${{ inputs.build_arg }}
@@ -71,32 +76,29 @@ jobs:
         run: |
           set -euo pipefail
 
-          docker_args=(
-            --rm
-            --pull=always
-            -e "GITHUB_TOKEN=${APP_TOKEN}"
-            -e GITHUB_APP_ID
-            -e "GITHUB_REPOSITORY=${GITHUB_REPOSITORY}"
-            -e "BUMP_FAIL_ON_ERRORS=true"
-            -e "USE_VARIANTS=${INPUT_USE_VARIANTS}"
-            -e "VARIANTS_DIR=${INPUT_VARIANTS_DIR}"
-            -e "DRY_RUN=${INPUT_DRY_RUN}"
-          )
+          # Explicit CLI flags replace the legacy environment-variable mode.
+          # Exit status 2 means some upstreams failed; the job fails either way.
+          args=(pr "--repo=${GITHUB_REPOSITORY}" "--variants-dir=${INPUT_VARIANTS_DIR}")
+          [[ -n "${INPUT_PROVIDER}" ]] && args+=("--provider=${INPUT_PROVIDER}")
+          [[ -n "${INPUT_TAG_PATTERN}" ]] && args+=("--tag-pattern=${INPUT_TAG_PATTERN}")
+          [[ -n "${INPUT_DOCKER_TAG_PATTERN}" ]] && args+=("--docker-tag-pattern=${INPUT_DOCKER_TAG_PATTERN}")
+          [[ -n "${INPUT_BUILD_ARG}" ]] && args+=("--build-arg=${INPUT_BUILD_ARG}")
+          [[ -n "${INPUT_UPSTREAM_REPO}" ]] && args+=("--upstream=${INPUT_UPSTREAM_REPO}")
+          [[ "${INPUT_DRY_RUN}" == "true" ]] && args+=(--dry-run)
 
-          if [[ -n "${INPUT_TAG_PATTERN}" ]]; then
-            docker_args+=(-e "TAG_PATTERN=${INPUT_TAG_PATTERN}")
-          fi
+          # Credentials are passed by name so they never appear in process arguments.
+          status=0
+          docker run --rm --pull=always \
+            --env GITHUB_TOKEN \
+            --env GITHUB_APP_ID \
+            dappnode/tropibot:latest \
+            bump-runner "${args[@]}" > "${RUNNER_TEMP}/bump-summary.txt" || status=$?
 
-          if [[ -n "${INPUT_DOCKER_TAG_PATTERN}" ]]; then
-            docker_args+=(-e "DOCKER_TAG_PATTERN=${INPUT_DOCKER_TAG_PATTERN}")
-          fi
-
-          if [[ -n "${INPUT_BUILD_ARG}" ]]; then
-            docker_args+=(-e "BUILD_ARG=${INPUT_BUILD_ARG}")
-          fi
-
-          if [[ -n "${INPUT_UPSTREAM_REPO}" ]]; then
-            docker_args+=(-e "UPSTREAM_REPO=${INPUT_UPSTREAM_REPO}")
-          fi
-
-          docker run "${docker_args[@]}" dappnode/tropibot:latest bump-runner
+          cat "${RUNNER_TEMP}/bump-summary.txt"
+          {
+            echo '### Upstream bump'
+            echo '```text'
+            cat "${RUNNER_TEMP}/bump-summary.txt"
+            echo '```'
+          } >> "${GITHUB_STEP_SUMMARY}"
+          exit "${status}"

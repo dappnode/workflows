@@ -35,6 +35,8 @@ jobs:
     secrets: inherit
 ```
 
+The workflow runs `bump-runner pr` from `dappnode/tropibot:latest`, which opens one bump PR per upstream with a new release. Existing Compose digest pins (`version@sha256:…`) are kept and refreshed for the new version.
+
 Optional override inputs are available for repos that need explicit TropiBot bump configuration:
 
 ```yaml
@@ -47,8 +49,22 @@ jobs:
     secrets: inherit
 ```
 
-For repos with mixed upstream version formats, omit override inputs and let `bump-runner`
-resolve the target Docker tag format per upstream through its registry inference path.
+| Input | Default | Meaning |
+|-------|---------|---------|
+| `upstream_repo` | all upstreams | Upstream the override inputs below apply to |
+| `provider` | manifest / built-in default | Version source: `docker` (GitHub release, validated against the image tag), `github` (release tag as-is), or `docker_tags` (highest image tag on Docker Hub or any OCI registry) |
+| `tag_pattern` | none | Regex extracting the version from the release tag (capture group 1) |
+| `docker_tag_pattern` | inferred from the Dockerfile | Docker tag template, e.g. `multiarch-{version}` |
+| `build_arg` | manifest `arg` | Compose build argument holding the version |
+| `variants_dir` | `package_variants` | Variants directory; override for legacy layouts |
+| `dry_run` | `false` | Log GitHub writes instead of performing them |
+| `use_variants` | `true` | Deprecated and ignored; variant directories are always scanned |
+
+For repos with mixed upstream version formats, omit override inputs and let `bump-runner` resolve the target Docker tag format per upstream through its registry inference path.
+
+The run's result (bumped, up to date, skipped, errors) is written to the job summary. The job fails when any upstream fails.
+
+Packages that need their own triggers, reviewers, or labels can instead update files with the [`dappnode/tropibot/actions/bump-upstream`](https://github.com/dappnode/tropibot/tree/master/actions/bump-upstream) action and open the PR themselves.
 
 ### Release (Execution Client)
 
